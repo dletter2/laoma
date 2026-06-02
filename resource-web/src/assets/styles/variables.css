@@ -1,0 +1,20 @@
+:root {
+  --primary: #409eff;
+  --primary-dark: #337ecc;
+  --text-primary: #303133;
+  --text-regular: #606266;
+  --text-secondary: #909399;
+  --bg-white: #ffffff;
+  --bg-page: #f5f7fa;
+  --border-color: #e4e7ed;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --radius: 8px;
+  --max-width: 1200px;
+
+  /* Breakpoints reference (use in @media):
+     --mobile:  <= 768px   (phone)
+     --tablet:  <= 1024px  (tablet)
+     --desktop: > 1024px   (desktop)
+  */
+}
