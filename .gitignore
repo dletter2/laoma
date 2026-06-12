@@ -1,6 +1,4 @@
 .*/**
-openspec/**
-deploy/logs/
 resource-admin/node_modules/*
 resource-admin/dist/*
 resource-web/node_modules/*
@@ -13,4 +11,3 @@ resource-api/uploads/
 resource-api/v5.4.21/
 package-lock.json
 *.pyc
-nul
