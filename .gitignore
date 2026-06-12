@@ -1,5 +1,4 @@
 .*/**
-docs/**
 openspec/**
 deploy/logs/
 resource-admin/node_modules/*
