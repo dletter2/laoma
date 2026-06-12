@@ -28,6 +28,14 @@
           <el-icon><User /></el-icon>
           <span>用户管理</span>
         </el-menu-item>
+        <el-menu-item index="/shares">
+          <el-icon><Share /></el-icon>
+          <span>分享管理</span>
+        </el-menu-item>
+        <el-menu-item index="/settings">
+          <el-icon><Setting /></el-icon>
+          <span>系统设置</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>
@@ -48,7 +56,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Odometer, Files, Menu, User } from '@element-plus/icons-vue'
+import { Odometer, Files, Menu, User, Share, Setting } from '@element-plus/icons-vue'
 import { useAdminStore } from '../../store/admin'
 
 const route = useRoute()
@@ -60,6 +68,8 @@ const titleMap: Record<string, string> = {
   '/resources': '资源管理',
   '/categories': '分类管理',
   '/users': '用户管理',
+  '/shares': '分享管理',
+  '/settings': '系统设置',
 }
 const routeTitle = computed(() => titleMap[route.path] || '管理后台')
 

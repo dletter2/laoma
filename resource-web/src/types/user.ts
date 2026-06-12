@@ -1,6 +1,7 @@
 export interface User {
   id: number
   username: string
+  nickname: string
   role: string
   created_at: string | null
 }
@@ -13,6 +14,9 @@ export interface LoginData {
 export interface RegisterData {
   username: string
   password: string
+  nickname?: string
+  captcha_key?: string
+  captcha_code?: string
 }
 
 export interface TokenData {

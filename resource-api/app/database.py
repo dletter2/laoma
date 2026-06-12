@@ -27,6 +27,7 @@ async def init_db():
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL UNIQUE,
+            nickname TEXT NOT NULL DEFAULT '',
             password_hash TEXT NOT NULL,
             role TEXT NOT NULL DEFAULT 'user',
             status TEXT NOT NULL DEFAULT 'active',
@@ -45,10 +46,10 @@ async def init_db():
             title TEXT NOT NULL,
             summary TEXT NOT NULL DEFAULT '',
             category_id INTEGER NOT NULL,
-            cover_url TEXT DEFAULT '',
             tags TEXT DEFAULT '',
+            link TEXT DEFAULT '',
+            link_password TEXT DEFAULT '',
             file_size BIGINT DEFAULT 0,
-            file_path TEXT DEFAULT '',
             upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             is_hot INTEGER NOT NULL DEFAULT 0,
             view_count INTEGER NOT NULL DEFAULT 0,
@@ -68,5 +69,47 @@ async def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id),
             FOREIGN KEY (resource_id) REFERENCES resources(id)
         );
+
+        CREATE TABLE IF NOT EXISTS shares (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            url TEXT NOT NULL,
+            avatar_url TEXT NOT NULL DEFAULT '',
+            description TEXT NOT NULL DEFAULT '',
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL DEFAULT ''
+        );
     """)
+    await db.commit()
+
+    cursor = await db.execute("PRAGMA table_info(users)")
+    columns = [col[1] for col in await cursor.fetchall()]
+    if "nickname" not in columns:
+        await db.execute("ALTER TABLE users ADD COLUMN nickname TEXT NOT NULL DEFAULT ''")
+        await db.commit()
+
+
+async def seed_default_categories():
+    db = await get_db()
+    cursor = await db.execute("SELECT COUNT(*) as cnt FROM categories")
+    row = await cursor.fetchone()
+    if row["cnt"] > 0:
+        return
+    defaults = [
+        ("视频教程", 1),
+        ("电子书籍", 2),
+        ("软件工具", 3),
+        ("开发资源", 4),
+        ("学习资料", 5),
+        ("设计素材", 6),
+    ]
+    await db.executemany(
+        "INSERT INTO categories (name, sort_order) VALUES (?, ?)", defaults
+    )
     await db.commit()

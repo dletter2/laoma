@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAdminStore } from '../store/admin'
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory('/admin/'),
   routes: [
     {
       path: '/login',
@@ -18,6 +18,8 @@ const router = createRouter({
         { path: 'resources', name: 'resources', component: () => import('../views/ResourceManage.vue') },
         { path: 'categories', name: 'categories', component: () => import('../views/CategoryManage.vue') },
         { path: 'users', name: 'users', component: () => import('../views/UserManage.vue') },
+        { path: 'shares', name: 'shares', component: () => import('../views/ShareManage.vue') },
+        { path: 'settings', name: 'settings', component: () => import('../views/SettingsView.vue') },
       ],
     },
   ],

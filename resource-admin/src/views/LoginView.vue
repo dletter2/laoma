@@ -9,6 +9,12 @@
         <el-form-item prop="password">
           <el-input v-model="form.password" type="password" placeholder="密码" size="large" show-password />
         </el-form-item>
+        <el-form-item prop="captcha_code">
+          <div class="captcha-row">
+            <el-input v-model="form.captcha_code" placeholder="验证码" size="large" autocomplete="off" />
+            <img :src="captchaImage" @click="loadCaptcha" class="captcha-img" title="点击刷新" />
+          </div>
+        </el-form-item>
         <el-button type="primary" size="large" :loading="loading" style="width:100%" native-type="submit">
           登录
         </el-button>
@@ -18,22 +24,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import { authApi } from '../api/auth'
 import { useAdminStore } from '../store/admin'
+import http from '../api/index'
 
 const router = useRouter()
 const adminStore = useAdminStore()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
+const captchaImage = ref('')
 
-const form = reactive({ username: '', password: '' })
+const form = reactive({ username: '', password: '', captcha_key: '', captcha_code: '' })
 const rules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+  captcha_code: [{ required: true, message: '请输入验证码', trigger: 'blur' }],
+}
+
+async function loadCaptcha() {
+  try {
+    const res = await http.get('/auth/captcha')
+    captchaImage.value = res.data.data.captcha_image
+    form.captcha_key = res.data.data.captcha_key
+  } catch { /* ignore */ }
 }
 
 async function handleLogin() {
@@ -52,10 +69,13 @@ async function handleLogin() {
     router.push('/')
   } catch (e) {
     ElMessage.error((e as Error).message)
+    loadCaptcha()
   } finally {
     loading.value = false
   }
 }
+
+onMounted(() => loadCaptcha())
 </script>
 
 <style scoped>
@@ -68,4 +88,12 @@ async function handleLogin() {
 }
 .login-card { width: 400px; }
 .login-title { text-align: center; margin-bottom: 24px; font-size: 22px; }
+.captcha-row { display: flex; gap: 8px; width: 100%; align-items: center; }
+.captcha-row .el-input { flex: 1; }
+.captcha-img {
+  height: 40px;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
 </style>

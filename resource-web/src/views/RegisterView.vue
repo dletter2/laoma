@@ -8,12 +8,23 @@
           <input v-model="form.username" type="text" placeholder="请输入用户名（至少2个字符）" required />
         </div>
         <div class="form-group">
+          <label>昵称（选填）</label>
+          <input v-model="form.nickname" type="text" placeholder="不填将自动生成" />
+        </div>
+        <div class="form-group">
           <label>密码</label>
           <input v-model="form.password" type="password" placeholder="请输入密码（至少6位）" required />
         </div>
         <div class="form-group">
           <label>确认密码</label>
           <input v-model="form.confirmPassword" type="password" placeholder="再次输入密码" required />
+        </div>
+        <div class="form-group">
+          <label>验证码</label>
+          <div class="captcha-row">
+            <input v-model="form.captcha_code" type="text" placeholder="请输入验证码" required autocomplete="off" />
+            <img :src="captchaImage" @click="loadCaptcha" class="captcha-img" title="点击刷新" />
+          </div>
         </div>
         <p v-if="error" class="error">{{ error }}</p>
         <button type="submit" class="btn btn-primary" :disabled="submitting">
@@ -28,14 +39,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { authApi } from '../api/auth'
+import http from '../api/index'
 
 const router = useRouter()
-const form = ref({ username: '', password: '', confirmPassword: '' })
+const form = ref({ username: '', password: '', confirmPassword: '', nickname: '', captcha_key: '', captcha_code: '' })
+const captchaImage = ref('')
 const error = ref('')
 const submitting = ref(false)
+
+async function loadCaptcha() {
+  try {
+    const res = await http.get('/auth/captcha')
+    captchaImage.value = res.data.data.captcha_image
+    form.value.captcha_key = res.data.data.captcha_key
+  } catch { /* ignore */ }
+}
 
 async function handleRegister() {
   error.value = ''
@@ -44,15 +65,24 @@ async function handleRegister() {
   if (form.value.password !== form.value.confirmPassword) { error.value = '两次密码不一致'; return }
   submitting.value = true
   try {
-    await authApi.register({ username: form.value.username, password: form.value.password })
+    await authApi.register({
+      username: form.value.username,
+      password: form.value.password,
+      nickname: form.value.nickname || undefined,
+      captcha_key: form.value.captcha_key,
+      captcha_code: form.value.captcha_code,
+    })
     alert('注册成功，请登录')
     router.push('/login')
   } catch (e) {
     error.value = (e as Error).message
+    loadCaptcha()
   } finally {
     submitting.value = false
   }
 }
+
+onMounted(() => loadCaptcha())
 </script>
 
 <style scoped>
@@ -81,6 +111,14 @@ async function handleRegister() {
   font-size: 14px;
 }
 .form-group input:focus { border-color: var(--primary); }
+.captcha-row { display: flex; gap: 8px; align-items: center; }
+.captcha-row input { flex: 1; }
+.captcha-img {
+  height: 40px;
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
 .error { color: #f56c6c; font-size: 13px; margin-bottom: 12px; }
 .btn {
   width: 100%;

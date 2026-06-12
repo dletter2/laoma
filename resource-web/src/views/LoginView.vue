@@ -11,6 +11,13 @@
           <label>密码</label>
           <input v-model="form.password" type="password" placeholder="请输入密码" required />
         </div>
+        <div class="form-group">
+          <label>验证码</label>
+          <div class="captcha-row">
+            <input v-model="form.captcha_code" type="text" placeholder="请输入验证码" required autocomplete="off" />
+            <img :src="captchaImage" @click="loadCaptcha" class="captcha-img" title="点击刷新" />
+          </div>
+        </div>
         <p v-if="error" class="error">{{ error }}</p>
         <button type="submit" class="btn btn-primary" :disabled="submitting">
           {{ submitting ? '登录中...' : '登录' }}
@@ -24,18 +31,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { authApi } from '../api/auth'
 import { useUserStore } from '../store/user'
+import http from '../api/index'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
-const form = ref({ username: '', password: '' })
+const form = ref({ username: '', password: '', captcha_key: '', captcha_code: '' })
+const captchaImage = ref('')
 const error = ref('')
 const submitting = ref(false)
+
+async function loadCaptcha() {
+  try {
+    const res = await http.get('/auth/captcha')
+    captchaImage.value = res.data.data.captcha_image
+    form.value.captcha_key = res.data.data.captcha_key
+  } catch { /* ignore */ }
+}
 
 async function handleLogin() {
   error.value = ''
@@ -49,10 +66,13 @@ async function handleLogin() {
     router.push(redirect)
   } catch (e) {
     error.value = (e as Error).message
+    loadCaptcha()
   } finally {
     submitting.value = false
   }
 }
+
+onMounted(() => loadCaptcha())
 </script>
 
 <style scoped>
@@ -81,6 +101,14 @@ async function handleLogin() {
   font-size: 14px;
 }
 .form-group input:focus { border-color: var(--primary); }
+.captcha-row { display: flex; gap: 8px; align-items: center; }
+.captcha-row input { flex: 1; }
+.captcha-img {
+  height: 40px;
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
 .error { color: #f56c6c; font-size: 13px; margin-bottom: 12px; }
 .btn {
   width: 100%;

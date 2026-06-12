@@ -4,7 +4,7 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.database import init_db, get_db
+from app.database import init_db, get_db, close_db
 from app.services.auth_service import hash_password
 
 
@@ -36,6 +36,7 @@ async def seed():
             await db.execute("INSERT INTO categories (name, sort_order) VALUES (?, ?)", (name, sort_order))
             print(f"Created category: {name}")
     await db.commit()
+    await close_db()
     print("Seed data complete!")
 
 

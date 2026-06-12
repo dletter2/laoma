@@ -1,9 +1,6 @@
 <template>
   <div class="detail-page container" v-if="resource">
     <div class="detail-header">
-      <div class="detail-cover">
-        <img :src="resource.cover_url || placeholderImg" :alt="resource.title" @error="onImgError" />
-      </div>
       <div class="detail-info">
         <span class="detail-category">{{ resource.category_name }}</span>
         <h1 class="detail-title">{{ resource.title }}</h1>
@@ -17,8 +14,25 @@
         <div class="detail-tags" v-if="resource.tags">
           <span class="tag" v-for="tag in resource.tags.split(',')" :key="tag">{{ tag.trim() }}</span>
         </div>
+        <div class="detail-link-section">
+          <div class="link-row" v-if="resource.link">
+            <label>下载链接：</label>
+            <a :href="resource.link" target="_blank" rel="noopener noreferrer" class="link-url">{{ resource.link }}</a>
+          </div>
+          <div class="link-row" v-if="resource.link_password">
+            <label>提取码：</label>
+            <span class="link-password">{{ resource.link_password }}</span>
+            <button class="btn-copy" @click="copyPassword">复制</button>
+          </div>
+        </div>
         <div class="detail-actions">
-          <button class="btn btn-primary" @click="handleDownload">下载资源</button>
+          <a
+            v-if="resource.link"
+            :href="resource.link"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-primary"
+          >前往下载</a>
           <button
             class="btn"
             :class="isFavorited ? 'btn-favorited' : 'btn-outline'"
@@ -57,25 +71,13 @@ const resource = ref<Resource | null>(null)
 const related = ref<Resource[]>([])
 const isFavorited = ref(false)
 
-const placeholderImg = 'data:image/svg+xml,' + encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" fill="%23e4e7ed"><rect width="400" height="300"/><text x="200" y="160" text-anchor="middle" fill="%23909399" font-size="16">暂无封面</text></svg>'
-)
-
-function onImgError(e: Event) {
-  ;(e.target as HTMLImageElement).src = placeholderImg
-}
-
 function goDetail(r: Resource) {
   router.push(`/resource/${r.id}`)
 }
 
-function handleDownload() {
-  if (!userStore.isLoggedIn) {
-    router.push({ name: 'login', query: { redirect: route.fullPath } })
-    return
-  }
-  if (resource.value?.file_path) {
-    window.open(resource.value.file_path, '_blank')
+function copyPassword() {
+  if (resource.value?.link_password) {
+    navigator.clipboard.writeText(resource.value.link_password)
   }
 }
 
@@ -100,7 +102,6 @@ onMounted(async () => {
   try {
     const res = await resourceApi.get(id)
     resource.value = res.data.data
-    // Load related
     if (resource.value) {
       const relRes = await resourceApi.list({ category_id: resource.value.category_id, page: 1, page_size: 6 })
       related.value = (relRes.data.data?.items || []).filter((r) => r.id !== id)
@@ -121,15 +122,6 @@ onMounted(async () => {
   padding: 24px;
   box-shadow: var(--shadow-sm);
 }
-.detail-cover {
-  width: 320px;
-  min-width: 320px;
-  height: 240px;
-  border-radius: var(--radius);
-  overflow: hidden;
-  background: var(--bg-page);
-}
-.detail-cover img { width: 100%; height: 100%; object-fit: cover; }
 .detail-info { flex: 1; }
 .detail-category {
   display: inline-block;
@@ -157,6 +149,44 @@ onMounted(async () => {
   font-size: 12px;
   color: var(--text-secondary);
 }
+.detail-link-section {
+  background: var(--bg-page);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.link-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.link-row:last-child { margin-bottom: 0; }
+.link-row label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.link-url {
+  color: var(--primary);
+  word-break: break-all;
+  font-size: 14px;
+}
+.link-password {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--text-primary);
+}
+.btn-copy {
+  padding: 2px 10px;
+  font-size: 13px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 4px;
+}
+.btn-copy:hover { opacity: 0.9; }
 .detail-actions { display: flex; gap: 12px; }
 .btn {
   padding: 10px 28px;
@@ -164,6 +194,8 @@ onMounted(async () => {
   font-size: 15px;
   font-weight: 500;
   transition: all 0.2s;
+  text-align: center;
+  text-decoration: none;
 }
 .btn-primary { background: var(--primary); color: #fff; }
 .btn-primary:hover { background: var(--primary-dark); }
@@ -182,11 +214,6 @@ onMounted(async () => {
     gap: 16px;
     padding: 16px;
   }
-  .detail-cover {
-    width: 100%;
-    min-width: unset;
-    height: 200px;
-  }
   .detail-title { font-size: 20px; margin-bottom: 8px; }
   .detail-meta {
     flex-wrap: wrap;
@@ -195,8 +222,9 @@ onMounted(async () => {
   .detail-actions {
     flex-direction: column;
   }
-  .btn { width: 100%; text-align: center; }
+  .btn { width: 100%; }
   .related-section { margin-top: 32px; }
   .section-title { font-size: 17px; }
+  .link-row { flex-wrap: wrap; }
 }
 </style>

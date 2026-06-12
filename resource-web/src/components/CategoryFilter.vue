@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Category } from '../../types/api'
+import type { Category } from '../types/api'
 
 defineProps<{
   categories: Category[]

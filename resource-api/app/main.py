@@ -1,17 +1,16 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
-from app.database import init_db, close_db
+from app.database import init_db, close_db, seed_default_categories
 from app.middleware.error_handler import AppException
-from app.config import UPLOAD_DIR
-from app.routers import auth, categories, resources, upload, favorites, admin
+from app.routers import auth, categories, resources, favorites, admin, shares
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    await seed_default_categories()
     yield
     await close_db()
 
@@ -27,9 +26,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static files for uploads
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
-
 # Exception handler
 @app.exception_handler(AppException)
 async def app_exception_handler(request: Request, exc: AppException):
@@ -39,9 +35,9 @@ async def app_exception_handler(request: Request, exc: AppException):
 app.include_router(auth.router)
 app.include_router(categories.router)
 app.include_router(resources.router)
-app.include_router(upload.router)
 app.include_router(favorites.router)
 app.include_router(admin.router)
+app.include_router(shares.router)
 
 
 @app.get("/")

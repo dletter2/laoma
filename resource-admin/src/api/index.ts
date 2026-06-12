@@ -24,7 +24,7 @@ http.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401 || error.response?.status === 403) {
       localStorage.removeItem('admin_token')
-      window.location.href = '/login'
+      window.location.href = '/admin/login'
     }
     const msg = error.response?.data?.message || error.message || '请求失败'
     return Promise.reject(new Error(msg))

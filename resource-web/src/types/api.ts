@@ -11,6 +11,12 @@ export interface PaginatedData<T> {
   page_size: number
 }
 
+export interface TokenData {
+  access_token: string
+  token_type: string
+  refresh_token: string
+}
+
 export interface Category {
   id: number
   name: string

@@ -3,7 +3,7 @@
     <button class="page-btn" :disabled="page <= 1" @click="$emit('change', page - 1)">上一页</button>
     <template v-for="p in displayedPages" :key="p">
       <span v-if="p === '...'" class="page-ellipsis">...</span>
-      <button v-else class="page-btn" :class="{ active: p === page }" @click="$emit('change', p)">{{ p }}</button>
+      <button v-else class="page-btn" :class="{ active: p === page }" @click="$emit('change', p as number)">{{ p }}</button>
     </template>
     <button class="page-btn" :disabled="page >= totalPages" @click="$emit('change', page + 1)">下一页</button>
   </div>

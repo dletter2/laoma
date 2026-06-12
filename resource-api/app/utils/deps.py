@@ -24,7 +24,6 @@ async def get_current_user(request: Request, db: aiosqlite.Connection = Depends(
         raise UnauthorizedException("账户已被禁用")
     return {"id": user["id"], "username": user["username"], "role": user["role"]}
 
-
 async def get_admin_user(current_user: dict = Depends(get_current_user)) -> dict:
     if current_user["role"] != "admin":
         raise ForbiddenException("需要管理员权限")

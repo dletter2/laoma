@@ -1,5 +1,5 @@
 <template>
-  <AppHeader ref="headerRef" @focusSearch="handleFocusSearch" />
+  <AppHeader @focusSearch="handleFocusSearch" />
   <main class="main-content">
     <router-view />
   </main>
@@ -7,16 +7,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import AppHeader from './components/layout/AppHeader.vue'
 import AppFooter from './components/layout/AppFooter.vue'
 import { useUserStore } from './store/user'
 
 const userStore = useUserStore()
-const headerRef = ref<InstanceType<typeof AppHeader>>()
+const router = useRouter()
 
 function handleFocusSearch() {
-  headerRef.value?.focus()
+  router.push({ path: '/', query: { focusSearch: '1' } })
 }
 
 onMounted(() => {
@@ -30,6 +31,6 @@ onMounted(() => {
 
 <style scoped>
 .main-content {
-  min-height: calc(100vh - 64px - 80px);
+  min-height: calc(100vh - 64px - 260px);
 }
 </style>

@@ -4,12 +4,13 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.database import init_db
+from app.database import init_db, close_db
 
 
 async def main():
     print("Initializing database...")
     await init_db()
+    await close_db()
     print("Database initialized successfully!")
 
 

@@ -69,7 +69,7 @@ const loading = ref(true)
 const activeTab = ref('hot')
 const selectedCategory = ref<number | null>(null)
 const page = ref(1)
-const pageSize = 12
+const pageSize = 20
 const total = ref(0)
 const searchQuery = ref('')
 

@@ -19,8 +19,18 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>
         <template v-if="userStore.isLoggedIn">
-          <span class="username">{{ userStore.user?.username }}</span>
-          <button class="logout-btn" @click="handleLogout">退出</button>
+          <div class="user-dropdown" ref="dropdownRef">
+            <button class="username-btn" @click="dropdownOpen = !dropdownOpen">
+              <span>{{ userStore.user?.username }}</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <transition name="fade">
+              <div v-if="dropdownOpen" class="dropdown-menu">
+                <button class="dropdown-item" @click="openChangePassword">修改密码</button>
+                <button class="dropdown-item logout" @click="handleLogout">退出登录</button>
+              </div>
+            </transition>
+          </div>
         </template>
         <template v-else>
           <router-link to="/login" class="login-link">登录</router-link>
@@ -49,6 +59,7 @@
           </button>
           <template v-if="userStore.isLoggedIn">
             <span class="mobile-username">{{ userStore.user?.username }}</span>
+            <button class="mobile-action-btn" @click="openChangePasswordMobile">修改密码</button>
             <button class="mobile-logout" @click="handleLogout">退出登录</button>
           </template>
           <template v-else>
@@ -58,12 +69,47 @@
       </div>
     </transition>
   </header>
+
+  <!-- Change password dialog -->
+  <transition name="fade">
+    <div v-if="dialogVisible" class="dialog-overlay" @click.self="dialogVisible = false">
+      <div class="dialog-box">
+        <div class="dialog-header">
+          <h3>修改密码</h3>
+          <button class="dialog-close" @click="dialogVisible = false">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="dialog-body">
+          <div class="form-item">
+            <label>旧密码</label>
+            <input v-model="pwdForm.old_password" type="password" placeholder="请输入旧密码" />
+          </div>
+          <div class="form-item">
+            <label>新密码</label>
+            <input v-model="pwdForm.new_password" type="password" placeholder="请输入新密码（至少6位）" />
+          </div>
+          <div class="form-item">
+            <label>确认新密码</label>
+            <input v-model="pwdForm.confirm_password" type="password" placeholder="请再次输入新密码" />
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button class="btn-cancel" @click="dialogVisible = false">取消</button>
+          <button class="btn-confirm" :disabled="pwdLoading" @click="handleChangePassword">
+            {{ pwdLoading ? '提交中...' : '确认修改' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </transition>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, reactive, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../../store/user'
+import { authApi } from '../../api/auth'
 
 defineEmits<{ focusSearch: [] }>()
 
@@ -72,13 +118,59 @@ const router = useRouter()
 const userStore = useUserStore()
 const mobileMenuOpen = ref(false)
 
-// Close mobile menu on route change
-watch(() => route.path, () => { mobileMenuOpen.value = false })
+const dropdownOpen = ref(false)
+const dropdownRef = ref<HTMLElement>()
+const dialogVisible = ref(false)
+const pwdLoading = ref(false)
+const pwdForm = reactive({ old_password: '', new_password: '', confirm_password: '' })
+
+watch(() => route.path, () => { mobileMenuOpen.value = false; dropdownOpen.value = false })
+
+function handleClickOutside(e: MouseEvent) {
+  if (dropdownRef.value && !dropdownRef.value.contains(e.target as Node)) {
+    dropdownOpen.value = false
+  }
+}
+onMounted(() => document.addEventListener('click', handleClickOutside))
+onUnmounted(() => document.removeEventListener('click', handleClickOutside))
 
 function handleLogout() {
   mobileMenuOpen.value = false
+  dropdownOpen.value = false
   userStore.logout()
   router.push('/')
+}
+
+function openChangePassword() {
+  dropdownOpen.value = false
+  pwdForm.old_password = ''
+  pwdForm.new_password = ''
+  pwdForm.confirm_password = ''
+  dialogVisible.value = true
+}
+
+function openChangePasswordMobile() {
+  mobileMenuOpen.value = false
+  pwdForm.old_password = ''
+  pwdForm.new_password = ''
+  pwdForm.confirm_password = ''
+  dialogVisible.value = true
+}
+
+async function handleChangePassword() {
+  if (!pwdForm.old_password) return alert('请输入旧密码')
+  if (pwdForm.new_password.length < 6) return alert('新密码至少6位')
+  if (pwdForm.new_password !== pwdForm.confirm_password) return alert('两次输入的密码不一致')
+  pwdLoading.value = true
+  try {
+    await authApi.changePassword({ old_password: pwdForm.old_password, new_password: pwdForm.new_password })
+    alert('密码修改成功')
+    dialogVisible.value = false
+  } catch (e) {
+    alert((e as Error).message)
+  } finally {
+    pwdLoading.value = false
+  }
 }
 </script>
 
@@ -123,6 +215,124 @@ function handleLogout() {
 .logout-btn { background: none; color: var(--text-secondary); font-size: 14px; }
 .logout-btn:hover { color: var(--primary); }
 .login-link { font-size: 14px; }
+
+.user-dropdown { position: relative; }
+.username-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  transition: all 0.2s;
+}
+.username-btn:hover { color: var(--primary); background: var(--bg-page); }
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--bg-white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  min-width: 120px;
+  overflow: hidden;
+  z-index: 200;
+}
+.dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 16px;
+  background: none;
+  font-size: 14px;
+  color: var(--text-regular);
+  transition: all 0.15s;
+}
+.dropdown-item:hover { background: var(--bg-page); color: var(--primary); }
+.dropdown-item.logout { color: #f56c6c; }
+.dropdown-item.logout:hover { background: #fef0f0; }
+
+/* Dialog */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+.dialog-box {
+  background: var(--bg-white);
+  border-radius: var(--radius);
+  width: 420px;
+  max-width: 90vw;
+  box-shadow: var(--shadow-md);
+}
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+.dialog-header h3 { font-size: 16px; font-weight: 600; margin: 0; }
+.dialog-close { background: none; color: var(--text-secondary); padding: 4px; }
+.dialog-close:hover { color: var(--text-primary); }
+.dialog-body { padding: 20px; }
+.form-item { margin-bottom: 16px; }
+.form-item:last-child { margin-bottom: 0; }
+.form-item label {
+  display: block;
+  font-size: 14px;
+  color: var(--text-regular);
+  margin-bottom: 6px;
+}
+.form-item input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+.form-item input:focus { border-color: var(--primary); }
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-color);
+}
+.btn-cancel {
+  padding: 8px 20px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--bg-white);
+  font-size: 14px;
+  color: var(--text-regular);
+  cursor: pointer;
+}
+.btn-cancel:hover { color: var(--primary); border-color: var(--primary); }
+.btn-confirm {
+  padding: 8px 20px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--primary);
+  font-size: 14px;
+  color: #fff;
+  cursor: pointer;
+}
+.btn-confirm:hover { background: var(--primary-dark); }
+.btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 
 /* Hamburger - hidden on desktop */
 .hamburger-btn {
@@ -183,6 +393,8 @@ function handleLogout() {
 }
 .mobile-search-btn:hover { background: var(--bg-page); }
 .mobile-username { font-size: 14px; color: var(--text-secondary); }
+.mobile-action-btn { background: none; color: var(--text-regular); font-size: 14px; }
+.mobile-action-btn:hover { color: var(--primary); }
 .mobile-logout { background: none; color: var(--text-secondary); font-size: 14px; }
 .mobile-login {
   font-size: 14px;

@@ -24,29 +24,27 @@
         <textarea v-model="form.summary" rows="4" placeholder="请描述资源内容"></textarea>
       </div>
       <div class="form-group">
-        <label>资源文件 <span class="required">*</span></label>
-        <div class="file-upload">
-          <input type="file" ref="fileInput" @change="handleFile" />
-          <div v-if="selectedFile" class="file-info">
-            <span>{{ selectedFile.name }} ({{ formatSize(selectedFile.size) }})</span>
-            <button class="btn-text" @click="removeFile">移除</button>
-          </div>
-          <p v-if="fileError" class="error">{{ fileError }}</p>
-        </div>
+        <label>分享链接 <span class="required">*</span></label>
+        <input v-model="form.link" type="text" placeholder="请输入网盘分享链接" />
       </div>
       <div class="form-group">
-        <label>封面图</label>
-        <input type="file" accept="image/*" @change="handleCover" />
-        <div v-if="coverPreview" class="cover-preview">
-          <img :src="coverPreview" alt="封面预览" />
+        <label>提取码</label>
+        <input v-model="form.link_password" type="text" placeholder="请输入提取码（如有）" class="input-short" />
+      </div>
+      <div class="form-group">
+        <label>文件大小 <span class="required">*</span></label>
+        <div class="size-input-row">
+          <input v-model.number="form.file_size" type="number" min="0" placeholder="文件大小" />
+          <select v-model="sizeUnit" class="size-unit">
+            <option value="1">B</option>
+            <option value="1024">KB</option>
+            <option value="1048576">MB</option>
+            <option value="1073741824">GB</option>
+          </select>
         </div>
       </div>
-      <div v-if="uploading" class="progress-bar">
-        <div class="progress-fill" :style="{ width: progress + '%' }"></div>
-        <span class="progress-text">{{ progress }}%</span>
-      </div>
-      <button class="btn btn-primary submit-btn" :disabled="uploading" @click="handleSubmit">
-        {{ uploading ? '上传中...' : '提交资源' }}
+      <button class="btn btn-primary submit-btn" :disabled="submitting" @click="handleSubmit">
+        {{ submitting ? '提交中...' : '提交资源' }}
       </button>
     </div>
 
@@ -72,21 +70,15 @@
 import { ref, onMounted } from 'vue'
 import { categoryApi } from '../api/category'
 import { resourceApi } from '../api/resource'
-import { useUserStore } from '../store/user'
-import { formatSize, formatDate } from '../utils/format'
+import { formatDate } from '../utils/format'
 import type { Category } from '../types/api'
 import type { Resource } from '../types/resource'
 
-const userStore = useUserStore()
 const categories = ref<Category[]>([])
-const selectedFile = ref<File | null>(null)
-const coverPreview = ref('')
-const coverUrl = ref('')
-const fileError = ref('')
-const uploading = ref(false)
-const progress = ref(0)
+const submitting = ref(false)
 const myResources = ref<Resource[]>([])
 const loadingHistory = ref(false)
+const sizeUnit = ref('1048576')
 
 const statusMap: Record<string, string> = {
   pending: '审核中',
@@ -101,76 +93,42 @@ const form = ref({
   category_id: '' as number | string,
   tags: '',
   summary: '',
+  link: '',
+  link_password: '',
+  file_size: '' as number | string,
 })
 
-function handleFile(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  if (file.size > 200 * 1024 * 1024) {
-    fileError.value = '文件大小不能超过200MB'
-    return
-  }
-  fileError.value = ''
-  selectedFile.value = file
-}
-
-function removeFile() {
-  selectedFile.value = null
-}
-
-function handleCover(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (file) {
-    coverPreview.value = URL.createObjectURL(file)
-    resourceApi.upload(file).then((res) => {
-      coverUrl.value = res.data.data?.url || ''
-    })
-  }
-}
-
 async function handleSubmit() {
-  if (!form.value.title || !form.value.category_id || !form.value.summary) {
+  if (!form.value.title || !form.value.category_id || !form.value.summary || !form.value.link) {
     alert('请填写所有必填字段')
     return
   }
-  if (!selectedFile.value) {
-    alert('请选择资源文件')
-    return
-  }
-  uploading.value = true
-  progress.value = 0
+  const fileSizeBytes = Number(form.value.file_size) * Number(sizeUnit.value)
+  submitting.value = true
   try {
-    // Upload file first
-    const uploadRes = await resourceApi.upload(selectedFile.value, (p) => { progress.value = p })
-    const fileData = uploadRes.data.data
-    // Create resource
     await resourceApi.create({
       title: form.value.title,
       summary: form.value.summary,
       category_id: Number(form.value.category_id),
       tags: form.value.tags,
-      file_size: fileData?.size || 0,
-      file_path: fileData?.url || '',
-      cover_url: coverUrl.value,
+      link: form.value.link,
+      link_password: form.value.link_password,
+      file_size: fileSizeBytes || 0,
     })
-    alert('资源上传成功，等待审核！')
-    form.value = { title: '', category_id: '', tags: '', summary: '' }
-    selectedFile.value = null
-    coverUrl.value = ''
-    coverPreview.value = ''
+    alert('资源提交成功，等待审核！')
+    form.value = { title: '', category_id: '', tags: '', summary: '', link: '', link_password: '', file_size: '' }
     loadHistory()
   } catch (e) {
     alert((e as Error).message)
   } finally {
-    uploading.value = false
+    submitting.value = false
   }
 }
 
 async function loadHistory() {
   loadingHistory.value = true
   try {
-    // Using resource list as upload history (filter by uploader would need backend support)
-    const res = await resourceApi.list({ sort: 'latest', page: 1, page_size: 20 })
+    const res = await resourceApi.my({ page: 1, page_size: 20 })
     myResources.value = res.data.data?.items || []
   } finally {
     loadingHistory.value = false
@@ -202,6 +160,7 @@ onMounted(async () => {
 }
 .required { color: #f56c6c; }
 .form-group input[type="text"],
+.form-group input[type="number"],
 .form-group select,
 .form-group textarea {
   width: 100%;
@@ -214,32 +173,16 @@ onMounted(async () => {
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
   border-color: var(--primary);
 }
-.file-info { display: flex; align-items: center; gap: 12px; margin-top: 8px; font-size: 14px; }
-.btn-text { background: none; color: var(--primary); font-size: 13px; }
-.error { color: #f56c6c; font-size: 13px; margin-top: 4px; }
-.cover-preview { margin-top: 8px; }
-.cover-preview img { max-width: 200px; max-height: 150px; border-radius: 6px; }
-.progress-bar {
-  position: relative;
-  height: 24px;
-  background: var(--bg-page);
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 16px;
-}
-.progress-fill {
-  height: 100%;
-  background: var(--primary);
-  border-radius: 12px;
-  transition: width 0.3s;
-}
-.progress-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 12px;
-  color: var(--text-primary);
+.input-short { max-width: 200px; }
+.size-input-row { display: flex; gap: 8px; align-items: center; }
+.size-input-row input { flex: 1; }
+.size-input-row .size-unit {
+  width: 80px;
+  flex-shrink: 0;
+  padding: 10px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 14px;
 }
 .submit-btn { padding: 12px 40px; }
 .btn-primary { background: var(--primary); color: #fff; border-radius: var(--radius); }
@@ -271,11 +214,12 @@ onMounted(async () => {
   .upload-page { padding: 16px 0; }
   .card { padding: 16px; border-radius: 6px; }
   .form-group input[type="text"],
+  .form-group input[type="number"],
   .form-group select,
   .form-group textarea {
-    font-size: 16px; /* prevent iOS zoom */
+    font-size: 16px;
   }
-  .cover-preview img { max-width: 100%; }
+  .input-short { max-width: 100%; }
   .submit-btn { width: 100%; }
   .history-item {
     flex-direction: column;

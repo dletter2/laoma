@@ -11,4 +11,7 @@ export const authApi = {
 
   me: () =>
     http.get<ApiResponse<User>>('/auth/me'),
+
+  changePassword: (data: { old_password: string; new_password: string }) =>
+    http.put<ApiResponse<null>>('/auth/password', data),
 }

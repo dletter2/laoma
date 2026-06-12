@@ -1,12 +1,9 @@
 from fastapi import APIRouter, Depends, Query
-from app.models.resource import ResourceCreate, ResourceUpdate, ResourceOut, ResourceStatusUpdate
+from app.models.resource import ResourceCreate, ResourceUpdate
 from app.models.response import BaseResponse, PaginatedData, PaginatedResponse
 from app.services import resource_service
-from app.services.resource_service import _row_to_out
 from app.utils.deps import get_current_user, get_admin_user
 from app.config import DEFAULT_PAGE_SIZE
-import aiosqlite
-from app.database import get_db
 
 router = APIRouter(prefix="/api/v1/resources", tags=["resources"])
 
@@ -38,6 +35,16 @@ async def search_resources(
         items, total = [], 0
     else:
         items, total = await resource_service.search_resources(q, page, page_size)
+    return PaginatedResponse(data=PaginatedData(items=items, total=total, page=page, page_size=page_size))
+
+
+@router.get("/my")
+async def list_my_resources(
+    current_user: dict = Depends(get_current_user),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=50),
+):
+    items, total = await resource_service.list_my_resources(current_user["id"], page, page_size)
     return PaginatedResponse(data=PaginatedData(items=items, total=total, page=page, page_size=page_size))
 
 

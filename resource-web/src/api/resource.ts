@@ -15,6 +15,9 @@ export const resourceApi = {
   create: (data: ResourceCreate) =>
     http.post<ApiResponse<Resource>>('/resources', data),
 
+  my: (params?: { page?: number; page_size?: number }) =>
+    http.get<ApiResponse<PaginatedData<Resource>>>('/resources/my', { params }),
+
   favorite: (id: number) =>
     http.post<ApiResponse<{ favorited: boolean }>>(`/resources/${id}/favorite`),
 
@@ -23,15 +26,4 @@ export const resourceApi = {
 
   favorites: (params?: { page?: number; page_size?: number }) =>
     http.get<ApiResponse<PaginatedData<Resource>>>('/users/me/favorites', { params }),
-
-  upload: (file: File, onProgress?: (percent: number) => void) => {
-    const form = new FormData()
-    form.append('file', file)
-    return http.post<ApiResponse<{ url: string; size: number; filename: string }>>('/upload', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      onUploadProgress: (e) => {
-        if (e.total && onProgress) onProgress(Math.round((e.loaded * 100) / e.total))
-      },
-    })
-  },
 }

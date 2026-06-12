@@ -14,20 +14,27 @@
       <ResourceGrid v-else-if="resources.length" :resources="resources" @cardClick="goDetail" />
       <EmptyState v-else text="暂无热门资源" />
     </section>
+
+    <!-- Share resources -->
+    <section class="share-section container">
+      <ShareGrid />
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import SearchBox from '../components/search/SearchBox.vue'
 import ResourceGrid from '../components/resource/ResourceGrid.vue'
 import SkeletonCard from '../components/common/SkeletonCard.vue'
 import EmptyState from '../components/common/EmptyState.vue'
+import ShareGrid from '../components/share/ShareGrid.vue'
 import { resourceApi } from '../api/resource'
 import type { Resource } from '../types/resource'
 
 const router = useRouter()
+const route = useRoute()
 const searchBoxRef = ref<InstanceType<typeof SearchBox>>()
 const resources = ref<Resource[]>([])
 const loading = ref(true)
@@ -40,6 +47,12 @@ function goDetail(r: Resource) {
   router.push(`/resource/${r.id}`)
 }
 
+function tryFocusSearch() {
+  if (route.query.focusSearch) {
+    searchBoxRef.value?.focus()
+  }
+}
+
 onMounted(async () => {
   try {
     const res = await resourceApi.list({ sort: 'hot', page: 1, page_size: 8 })
@@ -47,7 +60,10 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+  tryFocusSearch()
 })
+
+watch(() => route.query.focusSearch, tryFocusSearch)
 
 function focus() {
   searchBoxRef.value?.focus()
@@ -73,6 +89,7 @@ defineExpose({ focus })
 .hero-section :deep(.search-input:focus) { border-color: #fff; background: rgba(255,255,255,0.25); }
 .hero-section :deep(.search-btn) { background: #fff; color: #764ba2; }
 .hot-section { padding: 40px 20px 0; }
+.share-section { padding: 40px 20px 0; }
 .section-title {
   font-size: 22px;
   font-weight: 600;
